@@ -135,7 +135,6 @@ class OpenIDConnect(object):
 
         # Set some default configuration options
         app.config.setdefault('OIDC_SCOPES', ['openid', 'email'])
-        app.config.setdefault('OIDC_GOOGLE_APPS_DOMAIN', None)
         app.config.setdefault('OIDC_ID_TOKEN_COOKIE_NAME', 'oidc_id_token')
         app.config.setdefault('OIDC_ID_TOKEN_COOKIE_PATH', '/')
         app.config.setdefault('OIDC_ID_TOKEN_COOKIE_TTL', 7 * 86400)  # 7 days
@@ -582,8 +581,6 @@ class OpenIDConnect(object):
             'state': urlsafe_b64encode(json.dumps(state).encode('utf-8')),
         }
         extra_params.update(current_app.config['OIDC_EXTRA_REQUEST_AUTH_PARAMS'])
-        if current_app.config['OIDC_GOOGLE_APPS_DOMAIN']:
-            extra_params['hd'] = current_app.config['OIDC_GOOGLE_APPS_DOMAIN']
         if current_app.config['OIDC_OPENID_REALM']:
             extra_params['openid.realm'] = current_app.config[
                 'OIDC_OPENID_REALM']
@@ -651,12 +648,6 @@ class OpenIDConnect(object):
         # step 12-13: not requested acr or auth_time, so not needed to test
 
         # additional steps specific to our usage
-        if current_app.config['OIDC_GOOGLE_APPS_DOMAIN'] and \
-                id_token.get('hd') != current_app.config[
-                    'OIDC_GOOGLE_APPS_DOMAIN']:
-            logger.error('Invalid google apps domain')
-            return False
-
         if not id_token.get('email_verified', False) and \
                 current_app.config['OIDC_REQUIRE_VERIFIED_EMAIL']:
             logger.error('Email not verified')
@@ -719,12 +710,6 @@ class OpenIDConnect(object):
         id_token = credentials.id_token
         if not self._is_id_token_valid(id_token):
             logger.debug("Invalid ID token")
-            if id_token.get('hd') != current_app.config[
-                    'OIDC_GOOGLE_APPS_DOMAIN']:
-                return True, self._oidc_error(
-                    "You must log in with an account from the {0} domain."
-                    .format(current_app.config['OIDC_GOOGLE_APPS_DOMAIN']),
-                    self.WRONG_GOOGLE_APPS_DOMAIN)
             return True, self._oidc_error()
 
         # store credentials by subject
